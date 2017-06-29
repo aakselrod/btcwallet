@@ -372,6 +372,7 @@ func (w *Wallet) syncWithChain() error {
 		if err != nil {
 			return err
 		}
+		log.Infof("Setting synced to %d(%s)", height, hash)
 		return walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 			return w.Manager.SetSyncedTo(ns, &waddrmgr.BlockStamp{
@@ -392,15 +393,16 @@ func (w *Wallet) syncWithChain() error {
 	}
 	for cont := iter != nil; cont; cont = iter.Prev() {
 		bs := iter.BlockStamp()
-		log.Debugf("Checking for previous saved block with height %v hash %v",
+		log.Infof("Checking for previous saved block with height %v hash %v",
 			bs.Height, bs.Hash)
 		_, err = chainClient.GetBlock(&bs.Hash)
 		if err != nil {
+			log.Info("Block not found, will roll back after finding latest matching block.")
 			rollback = true
 			continue
 		}
 
-		log.Debug("Found matching block.")
+		log.Info("Found matching block.")
 		syncBlock = bs
 		break
 	}
@@ -409,6 +411,7 @@ func (w *Wallet) syncWithChain() error {
 		err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 			addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 			txmgrNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+			log.Infof("Rolling back to %d(%s)", syncBlock.Height, syncBlock.Hash)
 			err := w.Manager.SetSyncedTo(addrmgrNs, &syncBlock)
 			if err != nil {
 				return err

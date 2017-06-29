@@ -104,10 +104,12 @@ func (w *Wallet) connectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) err
 // block history from the reorged block for a wallet in-sync with the chain
 // server.
 func (w *Wallet) disconnectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) error {
+	log.Infof("disconnectBlock called for block %d(%s)", b.Height, b.Hash)
 	addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
 
 	if !w.ChainSynced() {
+		log.Info("Chain not synchronized, returning from disconnectBlock")
 		return nil
 	}
 
@@ -115,8 +117,10 @@ func (w *Wallet) disconnectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) 
 	// removed block.
 	iter := w.Manager.NewIterateRecentBlocks()
 	if iter != nil && iter.BlockStamp().Hash == b.Hash {
+		log.Info("Most recent block matches, doing a rollback")
 		if iter.Prev() {
 			prev := iter.BlockStamp()
+			log.Infof("Rolling back to %d(%s)", prev.Height, prev.Hash)
 			w.Manager.SetSyncedTo(addrmgrNs, &prev)
 			err := w.TxStore.Rollback(txmgrNs, prev.Height+1)
 			if err != nil {
@@ -128,6 +132,7 @@ func (w *Wallet) disconnectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) 
 			// will in turn lead to a rescan from either the
 			// earliest blockstamp the addresses in the manager are
 			// known to have been created.
+			log.Info("Rolling back to genesis block")
 			w.Manager.SetSyncedTo(addrmgrNs, nil)
 			// Rollback everything but the genesis block.
 			err := w.TxStore.Rollback(txmgrNs, 1)
