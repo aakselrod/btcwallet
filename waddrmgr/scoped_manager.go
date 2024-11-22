@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"sync"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
@@ -299,7 +298,7 @@ type ScopedKeyManager struct {
 	// operations each time a key need to be obtained.
 	privKeyCache *lru.Cache[DerivationPath, *cachedKey]
 
-	mtx sync.RWMutex
+	mtx mutex
 }
 
 // Scope returns the exact KeyScope of this scoped key manager.

@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -332,10 +333,36 @@ const (
 // paths.
 var newCryptoKey = defaultNewCryptoKey
 
+type mutex struct {
+	mtx sync.RWMutex
+}
+
+func (m *mutex) Lock() {
+	log.Debugf("Lock: %s", debug.Stack())
+	m.mtx.Lock()
+	log.Debugf("Lock success: %s", debug.Stack())
+}
+
+func (m *mutex) Unlock() {
+	log.Debugf("Unlock: %s", debug.Stack())
+	m.mtx.Unlock()
+}
+
+func (m *mutex) RLock() {
+	log.Debugf("RLock: %s", debug.Stack())
+	m.mtx.RLock()
+	log.Debugf("RLock success: %s", debug.Stack())
+}
+
+func (m *mutex) RUnlock() {
+	log.Debugf("RUnlock: %s", debug.Stack())
+	m.mtx.RUnlock()
+}
+
 // Manager represents a concurrency safe crypto currency address manager and
 // key store.
 type Manager struct {
-	mtx sync.RWMutex
+	mtx mutex
 
 	// scopedManager is a mapping of scope of scoped manager, the manager
 	// itself loaded into memory.
